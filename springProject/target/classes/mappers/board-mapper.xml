@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="boardMapper">
+		<!--  resultMap : 필드, 컬럼 매핑 -->
+		<resultMap type="Board" id="boardResultSet">
+        <id property="boardNo" column="BOARD_NO"/>
+        <result property="boardTitle" column="BOARD_TITLE"/>
+        <result property="boardContent" column="BOARD_CONTENT"/>
+        <result property="readCount" column="READ_COUNT"/>
+        <result property="boardCreateDate" column="BOARD_CREATE_DT"/>
+        <result property="boardModifyDate" column="BOARD_MODIFY_DT"/>
+        <result property="boardWriter" column="MEMBER_ID"/>
+        <result property="boardCategory" column="CATEGORY_NM"/>
+        <result property="boardType" column="BOARD_TYPE"/>
+        
+        <result property="boardName" column="BOARD_NM"/>
+        
+    </resultMap>
+    
+    <!-- attachment result Map -->
+    <resultMap type="Attachment" id="attachmentResultSet">
+    	<id property="fileNo" column="FILE_NO"/>
+    	<result property="parentBoardNo" column="PARENT_BOARD_NO"/>
+    	<result property="fileOriginName" column="FILE_ORIGIN_NAME"/>
+    	<result property="fileChangeName" column="FILE_CHANGE_NAME"/>
+    	<result property="filePath" column="FILE_PATH"/>
+    	<result property="fileLevel" column="FILE_LEVEL"/>
+    </resultMap>
+
+	<!-- 전체 게시글 수 조회 -->
+	<select id="getListCount" parameterType="_int" resultType="_int">
+		SELECT COUNT(*) FROM V_BOARD
+		WHERE BOARD_TYPE = #{boardType}		
+	</select>
+	
+	
+	<!-- 게시글 목록 조회 -->
+	<select id="selectList" parameterType="_int" resultMap="boardResultSet">
+		SELECT * FROM V_BOARD
+		WHERE BOARD_TYPE = #{boardType}
+		ORDER BY BOARD_NO DESC
+	</select>
+	
+	
+	<!-- 게시글 상세 조회 -->
+	<select id="selectBoard" parameterType="_int" resultMap="boardResultSet">
+		SELECT * FROM V_BOARD
+		WHERE BOARD_NO = #{boardNo}
+		AND BOARD_STATUS = 'Y'
+	</select>
+	
+	<!-- 게시글 조회 수 증가 -->
+	<update id="increaseCount" parameterType="_int" >
+		UPDATE BOARD SET
+		READ_COUNT = READ_COUNT + 1
+		WHERE BOARD_NO = #{boardNo}
+	</update>
+	
+	<!-- 다음 번호 조회 -->
+	<select id="selectNextNo" resultType="_int">
+        SELECT SEQ_BNO.NEXTVAL FROM DUAL
+    </select>
+	
+	<!-- 게시글 삽입 -->
+	<insert id="insertBoard" parameterType="Board">
+		INSERT INTO BOARD
+		VALUES(#{boardNo}, #{boardTitle}, #{boardContent}, DEFAULT, DEFAULT, DEFAULT, DEFAULT, #{boardWriter}, #{boardCategory}, #{boardType})
+	</insert>
+	
+	
+	<!-- 게시글 삭제 -->
+	<update id="deleteBoard" parameterType="_int">
+		UPDATE BOARD SET
+		BOARD_STATUS = 'N'
+		WHERE 
+		BOARD_NO = #{boardNo}
+	</update>
+	
+	
+	<!-- 게시글 수정 -->
+	<update id="updateBoard" parameterType="Board">
+		UPDATE BOARD SET
+		BOARD_TITLE = #{boardTitle},
+		BOARD_CONTENT = #{boardContent},
+		BOARD_MODIFY_DT = DEFAULT,
+		BOARD_CATEGORY = #{boardCategory}
+		WHERE BOARD_NO = #{boardNo}
+	</update>
+	
+	<!-- 파일 삽입 -->
+	<insert id="insertAttachment" parameterType="Attachment">
+		INSERT INTO ATTACHMENT VALUES(
+			SEQ_FNO.NEXTVAL, #{parentBoardNo},
+			#{fileOriginName}, #{fileChangeName}, #{filePath}, #{fileLevel}
+		)
+		
+	</insert>
+	
+	
+	<!-- 게시글 이미지 조회 -->
+	<select id="selectFiles" parameterType="_int" resultMap="attachmentResultSet">
+		SELECT * FROM ATTACHMENT 
+		WHERE PARENT_BOARD_NO = #{boardNo}
+		ORDER BY FILE_LEVEL
+	</select>
+	
+	<!-- 파일 정보 삭제 -->
+	<delete id="deleteAttachment" parameterType="_int">
+		DELETE FROM ATTACHMENT
+		WHERE PARENT_BOARD_NO = #{boardNo}
+	</delete>
+	
+	
+	<!-- Mybatis란? 데이터 CRUD를 편하기 하기 위해 XML로 구조화한 Mapper 설정 파일을 통해 JDBC를 구현한 영속성 프레임워크
+	
+		* Mybatis 장점
+		1) 오픈 소스이며 무료이다.
+		2) 관심사를 분리하여 이식성이 좋고, 유지보수에 유리하다. (결합도를 낮춤)
+		3) 동적 쿼리를 작성하기 유리하다. (코드 분량이 줄어듬)
+	
+	 -->
+	 
+	<!-- 썸네일 목록 조회 -->
+	 <select id="selectThumbnailList" parameterType="list" resultMap="attachmentResultSet">
+       SELECT * FROM ATTACHMENT
+        WHERE FILE_LEVEL=0
+        AND PARENT_BOARD_NO IN
+        <!-- 동적쿼리 foreach : 특정 collection객체를 반복접근하는 구문 -->
+        <!--  collection : 반복접근 할객체
+              index : 현재 접근중인 index
+              item : 현재 접근중인 요소
+              open : 반복문 시작시 추가할 구문
+              separator : 반복 접근시 마다 추가할 구문(구분자)
+        -->
+        <foreach collection="list" index="i" item="board"
+        open="(" close=")" separator=",">
+        #{board.boardNo}
+        </foreach>
+      </select>
+	
+	<!-- 파일 정보 수정 -->
+	<update id="updateAttachment" parameterType="Attachment">
+		UPDATE ATTACHMENT SET
+		FILE_ORIGIN_NAME = #{fileOriginName},
+		FILE_CHANGE_NAME = #{fileChangeName}
+		WHERE FILE_NO = ${fileNo}
+	</update>
+	
+	<!-- 파일 1개 정보 삭제 -->
+	<delete id="deleteAttachment2" parameterType="_int">
+	
+		DELETE FROM ATTACHMENT
+		WHERE FILE_NO = #{fileNo}
+	</delete>
+	
+	<!-- 최근 5일내에  게시판 조회수 높은 게시글 조회 -->
+	<!-- <![CDATA[ 부등호 포함 sql 구문 ]]> 
+		xml 파일에서 태그 기호(<, >) 를 태그가 아닌 문자 그대로로 인식 시키는 구문
+	-->
+	<select id="selectTopViews" parameterType="_int" resultMap="boardResultSet">
+		SELECT * FROM
+		(SELECT * FROM V_BOARD
+		WHERE BOARD_TYPE = #{type} 
+		AND board_create_dt BETWEEN 
+		TO_DATE(TO_CHAR(SYSDATE,'YYYY-MM-DD')) -5 
+		AND SYSDATE
+		ORDER BY READ_COUNT DESC)
+		<![CDATA[		
+		WHERE ROWNUM < = 5
+		]]>
+	</select>
+	
+	
+		<!-- DB에 저장된 파일 목록 조회  -->
+	<!-- * 검색 속도 향상을 위한 인덱스 생성
+	CREATE INDEX IDX_ATT_FILE_C_NAME ON ATTACHMENT (FILE_CHANGE_NAME);-->
+	<select id="selectDbFileList" resultType="string">
+		SELECT FILE_CHANGE_NAME FROM ATTACHMENT
+		WHERE TO_DATE(SUBSTR(FILE_CHANGE_NAME, 1, 8),'YYMMDDHH24') >= (SYSDATE - 3)
+	</select>
+	
+	
+</mapper>
