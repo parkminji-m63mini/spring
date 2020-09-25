@@ -51,6 +51,36 @@
       main, @content-main{
       	min-height: 100%;
       }
+      
+      
+      /* 팝업 레이어 */
+		#bell {
+			cursor: pointer;
+		}
+		
+		.popupLayer {
+			position: absolute;
+			display: none;
+			background-color: #ffffff;
+			border: solid 2px #d0d0d0;
+			width: 250px;
+			height: 130px;
+			padding: 10px;
+			overflow: auto;
+			z-index : 10000;
+			
+		}
+		
+		#noticeInfo{
+			font-size : 11px;
+		}
+		
+		.deleteNotice{
+			color : red;
+			font-weight: bold;
+			cursor: pointer;
+		}
+      
       </style>
    	
    	   <!-- sweetalert : alert창을 꾸밀 수 있게 해주는 라이브러리 https://sweetalert.js.org/ -->
@@ -83,7 +113,13 @@
             		</c:when>
 
             		<c:otherwise>
-              			  <li class="nav-item"><a class="nav-link" href="${contextPath}/member/mypage">${loginMember.memberName}</a></li>
+              			  <li class="nav-item">
+							<a class="nav-link" href="${contextPath}/member/mypage" style="display:inline">${loginMember.memberName}</a>
+								                	
+							<!-- 알림 이미지 -->
+							<img id="bell" src="${contextPath}/resources/images/bell.png" height="24px">
+						</li>
+
               			  <li class="nav-item"><a class="nav-link" href="${contextPath}/member/logout">Logout</a></li>
             		</c:otherwise>
             	</c:choose>
